@@ -1,0 +1,16 @@
+{
+  "name": "countdowns-server",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "npx tsx --env-file=.env --watch index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "express": "^4.21.2",
+    "firebase-admin": "^13.1.0"
+  }
+}

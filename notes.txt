@@ -1,0 +1,16 @@
+# All steps on server, for eventual portability:
+
+# 1. Install PostgreSQL
+sudo apt install postgresql
+
+# 2. Verify it's running
+sudo -u postgres
+systemctl status postgresql
+
+# 3. Create a new password and save it in your password manager
+
+# 4. Create a user for remotely accessing the database
+sudo -u postgres createuser -P testuser
+
+# 5. Verify new user can access database
+psql -h localhost -p 5432 -U testuser -d postgres
