@@ -14,3 +14,64 @@ sudo -u postgres createuser -P testuser
 
 # 5. Verify new user can access database
 psql -h localhost -p 5432 -U testuser -d postgres
+
+# 6. Moving on from db, now we want to set up the domain. First, install ddclient
+sudo apt install ddclient
+
+# Configuration on install doesn't really matter, it will just write .conf files which we will override subsequently
+# 7. Write ddclient conf files
+sudo vim /etc/ddclient.conf
+# /etc/ddclient.conf
+syslog=yes
+mail=root
+mail-failure=root
+ssl=yes
+protocol=namecheap
+use=web, web=ipify-ipv4
+login=jackbonaguro.com
+password=<Copy from namecheap>
+countdowns.jackbonaguro.com
+
+# /etc/default/ddclient
+run_dhclient="false"
+run_ipup="false"
+run_daemon="true"
+daemon_interval="300"
+
+# 8. Verify it works
+sudo ddclient
+
+# 9. Restart service and view status
+sudo service ddclient restart
+sudo service ddclient status
+
+# 10. Now that domain is reachable, configure db to accept remote connections
+sudo vim /etc/postgresql/15/main/postgresql.conf
+# /etc/postgresql/15/main/postgresql.conf
+...
+listen_addresses = '*'
+...
+
+sudo vim /etc/postgresql/15/main/pg_hba.conf
+# /etc/postgresql/15/main/pg_hba.conf
+...
+host  all   all   0.0.0.0/0   scram-sha-256
+...
+
+sudo service postgresql restart
+
+# Now you should be able to connect with Postico!
+
+# On to running the server on this instance.
+# 11. Install git
+sudo apt install git
+
+# 12. Clone the server
+git clone https://github.com/jackbonaguro/countdowns-server.git
+cd countdowns-server
+
+# 13. Install npm
+sudo apt install npm
+npm i
+
+# 14. Set up the env file
