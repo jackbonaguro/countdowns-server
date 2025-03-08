@@ -15,7 +15,8 @@ sudo -u postgres createuser -P testuser
 # 5. Verify new user can access database
 psql -h localhost -p 5432 -U testuser -d postgres
 
-# 6. Moving on from db, now we want to set up the domain. First, install ddclient
+# Moving on from db, now we want to set up the domain.
+# 6. First, install ddclient
 sudo apt install ddclient
 
 # Configuration on install doesn't really matter, it will just write .conf files which we will override subsequently
@@ -61,7 +62,6 @@ host  all   all   0.0.0.0/0   scram-sha-256
 sudo service postgresql restart
 
 # Now you should be able to connect with Postico!
-
 # On to running the server on this instance.
 # 11. Install git
 sudo apt install git
@@ -91,4 +91,39 @@ npm start
 
 # 17. Now that server runs, we want persistence. Install pm2
 npm install pm2 -g
+
+# 18. In another session, trigger a test notification
+curl http://localhost:3000/testNotification
+
+# Now let's turn the server into a service, so it doesn't go down with every error.
+# 19. Install n, which will manage node version for system use (NVM isn't intended for systemd):
+# https://forum.ghost.org/t/updating-systemd-node-version/41729/6
+sudo npm i -g n
+sudo n 20
+
+# 20. Copy countdowns-server.service to /etc/systemd/system/
+
+# 21. Start the service
+sudo systemctl daemon-reload
+sudo systemctl enable countdowns-server.service
+sudo systemctl start countdowns-server.service
+sudo systemctl status countdowns-server.service
+journalctl -u countdowns-server.service
+
+# Now we want to make the api accessible from the outside world.
+# This means we'll want to use nginx as a http proxy
+
+# 22. Install nginx
+sudo apt install nginx
+
+# 23. Install snap and certbot
+sudo apt install snapd
+sudo snap install --classic certbot
+sudo ln -s /snap/bin/certbot /usr/bin/certbot
+certbot --version 
+
+# 24. Run certbot
+sudo certbot certonly --nginx
+
+# 25. Copy default to /etc/nginx/sites-enabled/default
 

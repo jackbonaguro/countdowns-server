@@ -13,8 +13,8 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // Define the root path with a greeting message
-app.get("/", (req: Request, res: Response) => {
-    res.json({ message: "Welcome to the Express + TypeScript Server!" });
+app.get("/status", (req: Request, res: Response) => {
+    res.json({ status: "ok" });
 });
 
 app.get("/testNotification", async (req: Request, res: Response) => {

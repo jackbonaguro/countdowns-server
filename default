@@ -1,0 +1,19 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl default_server;
+    listen [::]:443 ssl default_server;
+    server_name countdowns.jackbonaguro.com;
+
+    ssl_certificate /etc/letsencrypt/live/countdowns.jackbonaguro.com/cert.pem;
+    ssl_certificate_key /etc/letsencrypt/live/countdowns.jackbonaguro.com/privkey.pem;
+
+    location / {
+      proxy_pass http://localhost:3000;
+    }
+}

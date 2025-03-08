@@ -1,0 +1,14 @@
+[Unit]
+Description=Countdowns server
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=1
+WorkingDirectory=/home/jackbonaguro/countdowns-server
+ExecStart=npx tsx --env-file=.env --watch index.ts
+
+[Install]
+WantedBy=multi-user.target
