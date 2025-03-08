@@ -108,7 +108,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable countdowns-server.service
 sudo systemctl start countdowns-server.service
 sudo systemctl status countdowns-server.service
-journalctl -u countdowns-server.service
+journalctl -xeu countdowns-server.service
 
 # Now we want to make the api accessible from the outside world.
 # This means we'll want to use nginx as a http proxy
