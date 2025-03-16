@@ -29,6 +29,10 @@ app.get("/test_all", async (req: Request, res: Response) => {
   res.json({ message: `Test notification sent to all devices` });
 });
 
+app.get('/test_crash', async (req: Request, res: Response) => {
+  throw new Error('Test crash');
+});
+
 app.use('/app', appRouter);
 
 // Start the Express server
