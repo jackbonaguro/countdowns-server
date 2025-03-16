@@ -2,7 +2,7 @@ import express, { Request, Response } from "express";
 import * as firebase from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import prisma from "./prisma";
-import appRouter from "./app";
+import appRouter from "./routers/app";
 import { sendTestNotification } from "./utils/notify";
 const firebaseApp = firebase.initializeApp({
   credential: firebase.applicationDefault(),
@@ -20,7 +20,7 @@ app.get("/status", (req: Request, res: Response) => {
     res.json({ status: "ok" });
 });
 
-app.get("/test_all", async (req: Request, res: Response) => {
+app.get("/test_notify_all", async (req: Request, res: Response) => {
   const devices = await prisma.device.findMany();
   for (const device of devices) {
     await sendTestNotification(device.token);
