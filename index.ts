@@ -39,3 +39,12 @@ app.use('/app', appRouter);
 app.listen(port, () => {
     console.log(`The server is running at http://localhost:${port}`);
 });
+process.on('uncaughtException', (err) => {
+  console.error(err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error(err);
+  process.exit(1);
+});

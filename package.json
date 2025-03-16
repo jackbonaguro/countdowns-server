@@ -4,6 +4,7 @@
   "main": "index.ts",
   "type": "module",
   "scripts": {
+    "dev": "npx tsx --env-file=.env index.ts",
     "start": "npx tsx --env-file=.env --watch index.ts",
     "pm2": "NODE_ENV=production pm2 --env-file=.env start index.ts --watch"
   },
