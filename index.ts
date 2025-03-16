@@ -3,6 +3,7 @@ import * as firebase from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 import prisma from "./prisma";
 import appRouter from "./app";
+import { sendTestNotification } from "./utils/notify";
 const firebaseApp = firebase.initializeApp({
   credential: firebase.applicationDefault(),
 });
@@ -19,32 +20,13 @@ app.get("/status", (req: Request, res: Response) => {
     res.json({ status: "ok" });
 });
 
-app.get("/testNotification", async (req: Request, res: Response) => {
-  const message = {
-    data: {
-      title: 'Test Notification',
-      name: 'A',
-      description: 'B',
-      body: 'C',
-      data: 'D',
-    },
-    notification: {
-      title: 'Countdown "Nora\'s Birthday" is 1 day away!',
-      // body: 'E',
-    },
-    token: process.env.DEVICE_TOKEN!
-  };
+app.get("/test_all", async (req: Request, res: Response) => {
+  const devices = await prisma.device.findMany();
+  for (const device of devices) {
+    await sendTestNotification(device.token);
+  }
 
-  getMessaging().send(message)
-    .then((response) => {
-      // Response is a message ID string.
-      console.log('Successfully sent message:', response);
-    })
-    .catch((error) => {
-      console.log('Error sending message:', error);
-    });
-
-  res.json({ message: 'Notification sent' });
+  res.json({ message: `Test notification sent to all devices` });
 });
 
 app.use('/app', appRouter);
