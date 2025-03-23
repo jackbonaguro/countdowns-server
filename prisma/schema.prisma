@@ -22,12 +22,27 @@ model Device {
 }
 
 model Countdown {
-  id       Int    @id @default(autoincrement())
-  device   Device @relation(fields: [deviceId], references: [id])
-  deviceId Int
-  uuid     String @unique
-  expiresAt DateTime
-  metadata  Json        // Everything the device needs to display the notification properly
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  id           Int            @id @default(autoincrement())
+  device       Device         @relation(fields: [deviceId], references: [id])
+  deviceId     Int
+  uuid         String         @unique // Generated on device
+  expiresAt    DateTime
+  metadata     Json // Everything the device needs to display the notification properly
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  Notification Notification[]
+}
+
+model Notification {
+  id          Int       @id @default(autoincrement())
+  countdown   Countdown @relation(fields: [countdownId], references: [id])
+  countdownId Int
+  notifyAt    DateTime
+
+  // Probably overkill, in practice timing is too sensitive
+  // so if we miss a notification for any reason we will just drop it
+  did_attempt Boolean   @default(false)
+  did_succeed Boolean   @default(false)
+  attemptedAt DateTime?
+  jobNumber  Int?
 }

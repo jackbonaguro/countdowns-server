@@ -5,3 +5,6 @@ journalctl -u countdowns-server.service -f
 # Remove all at jobs (mostly for testing)
 
 for i in `atq | awk '{print $1}'`;do atrm $i;done
+
+# Prisma migration (more of a dev tool than admin tool but I forget it)
+npx prisma migrate dev --name XXX

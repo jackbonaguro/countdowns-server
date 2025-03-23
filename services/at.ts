@@ -44,7 +44,7 @@ export async function scheduleJob(name: string, ref: string, timestamp: number):
     });
   });
 
-  console.log(`Invoked job ${name} with ref ${ref} & time ${t}`);
+  console.log(`Invoked job ${name} with ref ${ref} & time ${t}. Job number: ${jobNumber}`);
 
   return jobNumber;
 }
