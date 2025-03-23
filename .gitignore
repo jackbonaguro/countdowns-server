@@ -1,4 +1,7 @@
 node_modules/
+dist/
 .env
+
+jobs/*.txt
 
 *firebase-adminsdk*.json

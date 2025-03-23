@@ -4,16 +4,19 @@
   "main": "index.ts",
   "type": "module",
   "scripts": {
-    "dev": "npx tsx --env-file=.env index.ts",
-    "start": "npx tsx --env-file=.env --watch index.ts",
-    "pm2": "NODE_ENV=production pm2 --env-file=.env start index.ts --watch"
+    "dev": "npx tsx --env-file=.env --watch index.ts",
+    "start": "npx tsx --env-file=.env index.ts",
+    "build": "npx tsc"
   },
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@date-fns/tz": "^1.2.0",
+    "@date-fns/utc": "^2.1.0",
     "@prisma/client": "^6.4.1",
     "bree": "^9.2.4",
+    "date-fns": "^4.1.0",
     "express": "^4.21.2",
     "firebase-admin": "^13.1.0",
     "pg": "^8.13.3",

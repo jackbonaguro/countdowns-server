@@ -1,6 +1,10 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
 import prisma from '../prisma';
 import { z } from 'zod';
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { scheduleJob } from '../services/at';
+
 const router = express.Router();
 
 export type CountdownMetadata = {
@@ -68,6 +72,10 @@ router.post('/', async (req: Request, res: Response) => {
     }
   });
 
+  // Now that countdown is created, schedule a job to send a notification when it expires
+  const jobNumber = await scheduleJob('notify', newCountdown.id.toString(), newCountdown.expiresAt.getTime());
+  console.log('Notification job scheduled:', jobNumber);
+
   res.json({ countdown: newCountdown });
 });
 
@@ -99,6 +107,13 @@ router.delete('/:id', async (req: Request, res: Response) => {
   await prisma.countdown.delete({
     where: { id: countdown.id }
   });
+
+  // Cancel the job
+  try {
+    // TODO: store job number on new notifications schema in order to remove
+  } catch (error) {
+    console.error('Error cancelling job', error);
+  }
 
   res.json({ message: "Countdown deleted" });
 });

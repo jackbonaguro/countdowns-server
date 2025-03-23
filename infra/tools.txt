@@ -1,0 +1,7 @@
+# Tail main server logs
+
+journalctl -u countdowns-server.service -f
+
+# Remove all at jobs (mostly for testing)
+
+for i in `atq | awk '{print $1}'`;do atrm $i;done

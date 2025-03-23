@@ -127,3 +127,11 @@ sudo certbot certonly --nginx
 
 # 25. Copy default to /etc/nginx/sites-enabled/default
 
+# Ok, infra is coming together now! Add `at` for scheduling 1-time jobs.
+
+# 26. Install `at`
+sudo apt install -y at
+
+# 27. Get system timezone. Hopefully for server this is UTC, but at service should handle either way.
+date +%Z
+

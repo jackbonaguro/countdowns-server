@@ -4,7 +4,11 @@ import { getMessaging } from 'firebase-admin/messaging';
 import prisma from "./prisma";
 import appRouter from "./routers/app";
 import { sendTestNotification } from "./utils/notify";
-const firebaseApp = firebase.initializeApp({
+import path, { dirname } from 'path';
+import { fileURLToPath } from 'url';
+import { scheduleJob } from "./services/at";
+
+firebase.initializeApp({
   credential: firebase.applicationDefault(),
 });
 
@@ -17,7 +21,7 @@ const port = process.env.PORT || 3000;
 
 // Define the root path with a greeting message
 app.get("/status", (req: Request, res: Response) => {
-    res.json({ status: "ok" });
+  res.json({ status: "ok" });
 });
 
 app.get("/test_notify_all", async (req: Request, res: Response) => {
@@ -31,6 +35,15 @@ app.get("/test_notify_all", async (req: Request, res: Response) => {
 
 app.get('/test_crash', async (req: Request, res: Response) => {
   throw new Error('Test crash');
+});
+
+app.get('/test_job', async (req: Request, res: Response) => {
+  const date = new Date(Date.now() + 60000); // 1 minute from now
+
+  const jobNumber = await scheduleJob('test', 'test_job', date.getTime());
+
+  console.log('Job scheduled:', jobNumber);
+  res.json({ message: 'Job scheduled' });
 });
 
 app.use('/app', appRouter);
