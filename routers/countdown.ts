@@ -1,7 +1,8 @@
 import express, { Request, Response } from 'express';
 import prisma from '../prisma';
 import { z } from 'zod';
-import { scheduleJob } from '../services/at';
+import { cancelJob, scheduleJob } from '../services/at';
+import { UTCDate } from '@date-fns/utc';
 
 const router = express.Router();
 
@@ -14,18 +15,19 @@ export type Countdown = {
   emoji: string;
   color: string;
 }
-const validateCountdown = (countdown: object): Boolean => {
+const validateCountdown = (countdown: object): Countdown | undefined => {
   try {
-    return !!z.object({
+    return z.object({
       id: z.number(),
       title: z.string(),
-      date: z.date(),
-      time: z.date().optional(),
+      date: z.string().transform(str => new Date(str)),
+      time: z.string().transform(str => new Date(str)).optional(),
       emoji: z.string(),
       color: z.string(),
     }).parse(countdown);
   } catch (error) {
-    return false;
+    console.error('Error validating countdown', error);
+    return;
   }
 }
 
@@ -48,9 +50,9 @@ export type Reminder = {
   period: ReminderPeriod.CUSTOM,
   customPeriod: number
 };
-const validateReminder = (reminder: object): Boolean => {
+const validateReminder = (reminder: object): Reminder | undefined => {
   try {
-    return !!z.union([
+    const isValid = !!z.union([
       z.object({
         period: z.nativeEnum(ReminderPeriod).refine(arg => (arg !== ReminderPeriod.CUSTOM))
       }),
@@ -58,9 +60,10 @@ const validateReminder = (reminder: object): Boolean => {
         period: z.nativeEnum(ReminderPeriod).refine(arg => (arg === ReminderPeriod.CUSTOM)),
         customPeriod: z.number(),
       })
-    ])
+    ]);
+    if (isValid) return reminder as unknown as Reminder;
   } catch (error) {
-    return false;
+    return;
   }
 }
 
@@ -89,20 +92,19 @@ router.post('/', async (req: Request, res: Response) => {
   const token = req.headers.authorization!;
 
   // Parse countdown data
-  const isValidCountdown = validateCountdown(req.body.countdown);
-  if (!isValidCountdown) {
+  const validCountdown = validateCountdown(req.body.countdown);
+  if (!validCountdown) {
     return res.status(400).json({ error: "Invalid countdown" });
   }
-  const countdown = req.body.countdown as Countdown;
 
   // Parse reminders data
   // Using some to find if any element fails validation, then flipping back to false
-  const isValidReminders = Array.isArray(req.body.reminders) &&
-    !req.body.reminders.some((r: any) => (!validateReminder(r)))
-  if (!isValidReminders) {
+  const validReminders: undefined | (Reminder | undefined)[] = Array.isArray(req.body.reminders) &&
+    req.body.reminders.map((r: any) => (validateReminder(r)));
+
+  if (!validReminders || validReminders.some(r => !r)) {
     return res.status(400).json({ error: "Invalid reminders" });
   }
-  const reminders = req.body.reminders as Reminder[];
 
   const device = await prisma.device.findFirst({
     where: {
@@ -114,39 +116,43 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   // Similar to frontend
-  const expiresAt = new Date(countdown.date.getTime() + (countdown.time ? countdown.time.getTime() : 0));
+  const expiresAt = new Date(validCountdown.date.getTime() + (validCountdown.time ? validCountdown.time.getTime() : 0));
 
   const metadata: CountdownMetadata = {
-    title: countdown.title,
-    emoji: countdown.emoji,
-    color: countdown.color,
+    title: validCountdown.title,
+    emoji: validCountdown.emoji,
+    color: validCountdown.color,
   };
   const newCountdown = await prisma.countdown.create({
     data: {
       deviceId: device.id,
-      uuid: countdown.id.toString(),
+      uuid: validCountdown.id.toString(),
       expiresAt,
       metadata
     }
   });
-  for (const reminder of reminders) {
+  for (const reminder of validReminders as Reminder[]) {
     let offset: number;
+    console.log('reminder', reminder);
     if (reminder.period === ReminderPeriod.CUSTOM) {
       offset = reminder.customPeriod;
     } else {
       offset = REMINDER_OFFSETS[reminder.period];
     }
-    const notifyAt = new Date(newCountdown.expiresAt.getTime() - offset);
+    const notifyAt = new UTCDate(newCountdown.expiresAt.getTime() - offset);
+
+    console.log('notifyAt', notifyAt, newCountdown.expiresAt, offset);
 
     // Schedule a job to send a notification when it expires
-    const jobNumber = await scheduleJob('notify', newCountdown.id.toString(), newCountdown.expiresAt.getTime());
+    const randomId = Math.floor(Math.random() * 1e8);
+    const jobNumber = await scheduleJob('notify', randomId.toString(), newCountdown.expiresAt.getTime());
 
     // With countdown created and notification scheduled, create the row to track it
-    const notification = await prisma.notification.create({
+    await prisma.notification.create({
       data: {
         countdownId: newCountdown.id,
         notifyAt,
-        jobNumber,
+        jobNumber: randomId,
       }
     })
   }
@@ -154,9 +160,9 @@ router.post('/', async (req: Request, res: Response) => {
   res.json({ countdown: newCountdown });
 });
 
-router.delete('/:id', async (req: Request, res: Response) => {
+router.delete('/:uuid', async (req: Request, res: Response) => {
   const token = req.headers.authorization!;
-  const id = req.params.id;
+  const uuid = req.params.uuid;
 
   const device = await prisma.device.findFirst({
     where: {
@@ -169,7 +175,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
 
   const countdown = await prisma.countdown.findFirst({
     where: {
-      uuid: id
+      uuid,
     }
   });
   if (!countdown) {
@@ -183,13 +189,46 @@ router.delete('/:id', async (req: Request, res: Response) => {
     where: { id: countdown.id }
   });
 
-  // Cancel the job
-  try {
-    // TODO: store job number on new notifications schema in order to remove
-  } catch (error) {
-    console.error('Error cancelling job', error);
+  // Cancel related notification jobs that haven't executed yet
+  const notifications = await prisma.notification.findMany({
+    where: {
+      countdownId: countdown.id,
+      jobNumber: { not: null },
+      notifyAt: { gt: new UTCDate() }
+    }
+  });
+  for (const notification of notifications) {
+    if (notification.jobNumber) await cancelJob(notification.jobNumber);
   }
 
   res.json({ message: "Countdown deleted" });
 });
+
+router.get('/:uuid', async (req: Request, res: Response) => {
+  const token = req.headers.authorization!;
+  const uuid = req.params.uuid;
+
+  const device = await prisma.device.findFirst({
+    where: {
+      token: token
+    }
+  });
+  if (!device) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const countdown = await prisma.countdown.findFirst({
+    where: {
+      uuid,
+    }
+  });
+  if (!countdown) {
+    return res.status(404).json({ error: "Countdown not found" });
+  }
+  if (countdown.deviceId !== device.id) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  return res.json(countdown);
+});
+
 export default router;
